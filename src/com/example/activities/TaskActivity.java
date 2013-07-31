@@ -1,11 +1,6 @@
 package com.example.activities;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -16,7 +11,7 @@ import android.widget.RadioGroup;
 
 import com.example.taskthis.R;
 import com.example.taskthis.Status;
-import com.example.taskthis.Task;
+import com.example.taskthis.TaskManager;
 
 /**
  * Tela de detalhes/edicao de tarefas.
@@ -29,14 +24,9 @@ public class TaskActivity extends Activity {
 	private RadioGroup radios;
 	private RadioButton toDo;
 	private RadioButton doing;
+	private RadioButton done;
 	private Button saveButton;
-
-	// Dados transferidos(recebidos e depois enviados) quando ha mudanca de
-	// tela.
-	private Task task;
-	private List<Object> tasks;
-
-	// private TasksInfo tasksInfo;
+	private Button deleteButton;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -46,17 +36,23 @@ public class TaskActivity extends Activity {
 		init();
 		// Altera o texto do editor de campo para a descricao da tarefa
 		// recebida.
-		description.setText(task.getDescription());
+		description.setText(TaskManager.getInstance().getSelectedTask()
+				.getDescription());
 		// Seleciona o radio corresnpondente ao status da tarefa recebida.
-		if (task.getStatus().equals(Status.TODO)) {
+		if (TaskManager.getInstance().getSelectedTask().getStatus()
+				.equals(Status.TODO)) {
 			radios.check(R.id.todo_radio);
-		} else if (task.getStatus().equals(Status.DOING)) {
+		} else if (TaskManager.getInstance().getSelectedTask().getStatus()
+				.equals(Status.DOING)) {
 			radios.check(R.id.doing_radio);
 		} else {
 			radios.check(R.id.done_radio);
+			doing.setVisibility(View.GONE);
+			toDo.setVisibility(View.GONE);
 		}
 
 		addListenerSaveButton();
+		addListenerDeleteButton();
 
 	}
 
@@ -68,13 +64,16 @@ public class TaskActivity extends Activity {
 		radios = (RadioGroup) findViewById(R.id.status_radio);
 		toDo = (RadioButton) findViewById(R.id.todo_radio);
 		doing = (RadioButton) findViewById(R.id.doing_radio);
+		done = (RadioButton) findViewById(R.id.done_radio);
 		saveButton = (Button) findViewById(R.id.save_button);
+		deleteButton = (Button) findViewById(R.id.delete_button);
 
-		// Recebe os dados enviados da classe MainActivity.
-		task = (Task) this.getIntent().getSerializableExtra("selected_task");
-		Object[] aux = (Object[]) this.getIntent()
-				.getSerializableExtra("tasks");
-		tasks = new ArrayList<Object>(Arrays.asList(aux));
+		if (TaskManager.getInstance().amountDoing() >= 3
+				&& TaskManager.getInstance().getSelectedTask().getStatus()
+						.equals(Status.TODO)) {
+			doing.setVisibility(View.GONE);
+			done.setVisibility(View.GONE);
+		}
 	}
 
 	/**
@@ -90,24 +89,33 @@ public class TaskActivity extends Activity {
 								.isEmpty()) {
 					return;
 				}
-				task.setDescription(description.getText().toString());
+				TaskManager.getInstance().getSelectedTask()
+						.setDescription(description.getText().toString());
 
 				if (toDo.isChecked()) {
-					task.setStatus(Status.TODO);
+					TaskManager.getInstance().getSelectedTask()
+							.setStatus(Status.TODO);
 				} else if (doing.isChecked()) {
-					task.setStatus(Status.DOING);
+					TaskManager.getInstance().getSelectedTask()
+							.setStatus(Status.DOING);
 				} else {
-					task.setStatus(Status.DONE);
+					TaskManager.getInstance().getSelectedTask()
+							.setStatus(Status.DONE);
 				}
 
-				if (tasks.contains(task)) {
-					tasks.remove(task);
-					tasks.add(task);
-				}
-				// Envia de volta os dados recebidos.
-				Intent it = new Intent(getBaseContext(), MainActivity.class);
-				it.putExtra("tasks", tasks.toArray());
-				startActivity(it);
+				TaskManager.getInstance().refreshSelectedTask();
+				finish();
+			}
+		});
+	}
+
+	private void addListenerDeleteButton() {
+		deleteButton.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				TaskManager.getInstance().removeSelectedTask();
+				finish();
 			}
 		});
 	}

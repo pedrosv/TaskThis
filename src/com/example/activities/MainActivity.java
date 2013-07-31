@@ -1,12 +1,13 @@
 package com.example.activities;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -21,16 +22,10 @@ import com.example.taskthis.AdapterListView;
 import com.example.taskthis.R;
 import com.example.taskthis.Status;
 import com.example.taskthis.Task;
+import com.example.taskthis.TaskManager;
 
 public class MainActivity extends Activity {
 
-	// Pacote para transferia de dados entre telas.
-	private Bundle bundle;
-	// ID temporario.
-	private long idTemp;
-	// Lista de todas as tarefas criadas.
-	private List<Object> tasks;
-	// Lista das tarefas exibidas na tela.
 	private List<Task> tasksListView;
 
 	// ==== Componentes da IU ==== //
@@ -45,6 +40,8 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		Log.e("log", "Entrou em oncreate");
 		setContentView(R.layout.activity_main);
 
 		init();
@@ -59,18 +56,50 @@ public class MainActivity extends Activity {
 
 	}
 
+	@Override
+	protected void onRestart() {
+		super.onRestart();
+		Log.e("log", "Entrou em onrestart");
+		
+		tasksListView = new ArrayList<Task>(TaskManager.getInstance()
+				.getTasks());
+
+		listView.setAdapter(new AdapterListView(this.getBaseContext(),
+				tasksListView));
+		listView.invalidateViews();
+
+		toDo.setChecked(true);
+		doing.setChecked(true);
+		done.setChecked(true);
+	}
+
+	@Override
+	public void onBackPressed() {
+		TaskManager.getInstance().getTasks().clear();
+		finish();
+	}
+
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {
+		newConfig.orientation = Configuration.ORIENTATION_PORTRAIT;
+		super.onConfigurationChanged(newConfig);
+	
+	}
+
 	private void addListenerAddButton() {
 		addButton.setOnClickListener(new OnClickListener() {
 
 			@Override
 			public void onClick(View v) {
 				if (description.getText() == null
-						|| description.getText().toString().equals("")) {
+						|| description.getText().toString().replaceAll(" ", "")
+						.isEmpty()) {
 					return;
 				}
-				Task aux = new Task(description.getText().toString(), ++idTemp);
+				Task aux = new Task(description.getText().toString(),
+						TaskManager.getInstance().increaseId());
 				description.getText().clear();
-				tasks.add(aux);
+				TaskManager.getInstance().addTask(aux);
 				// Limpa o campo de texto.
 				description.getText().clear();
 				if (toDo.isChecked()) {
@@ -100,7 +129,8 @@ public class MainActivity extends Activity {
 						return false;
 					}
 					Task aux = new Task(description.getText().toString(),
-							++idTemp);
+							TaskManager.getInstance().increaseId());
+					TaskManager.getInstance().addTask(aux);
 					// Limpa o campo de texto.
 					description.getText().clear();
 					if (toDo.isChecked()) {
@@ -149,10 +179,9 @@ public class MainActivity extends Activity {
 	}
 
 	private void addTasks(Status status) {
-		for (Object t : tasks) {
-			if (((Task) t).getStatus().equals(status)
-					&& !tasksListView.contains(t)) {
-				tasksListView.add((Task) t);
+		for (Task t : TaskManager.getInstance().getTasks()) {
+			if (t.getStatus().equals(status) && !tasksListView.contains(t)) {
+				tasksListView.add(t);
 			}
 		}
 	}
@@ -170,9 +199,8 @@ public class MainActivity extends Activity {
 					int position, long id) {
 				Task item = ((AdapterListView) listView.getAdapter())
 						.getItem(position);
+				TaskManager.getInstance().setSelectedTask(item);
 				Intent it = new Intent(getBaseContext(), TaskActivity.class);
-				it.putExtra("selected_task", item);
-				it.putExtra("tasks", tasks.toArray());
 				startActivity(it);
 			}
 		});
@@ -182,38 +210,10 @@ public class MainActivity extends Activity {
 	 * Inicializa as variaveis.
 	 */
 	private void init() {
-		// Caso nao tenha dados para receber, bundle eh null.
-		bundle = this.getIntent().getExtras();
 		listView = (ListView) findViewById(R.id.list);
 
-		// Houve transferencia de dados.
-		if (bundle != null) {
-			Object[] aux = (Object[]) this.getIntent().getSerializableExtra(
-					"tasks");
-			tasks = new ArrayList<Object>(Arrays.asList(aux));
-
-		} else {
-			// Nao houve transferencia de dados
-			tasks = new ArrayList<Object>();
-
-			// TODO TESTE lembrar de apagar depois
-			Task task1 = new Task("Relatorio do projeto real", ++idTemp);
-			Task task2 = new Task("Implementacao projeto novo", ++idTemp);
-			Task task3 = new Task("Deixar projeto pra ultima hora", ++idTemp);
-
-			task2.setStatus(Status.DOING);
-			task3.setStatus(Status.DONE);
-
-			tasks.add(task1);
-			tasks.add(task2);
-			tasks.add(task3);
-			// FIM TESTE
-		}
-		idTemp = tasks.size();
 		tasksListView = new ArrayList<Task>();
-		for (Object o : tasks) {
-			tasksListView.add((Task) o);
-		}
+
 		listView.setAdapter(new AdapterListView(this.getBaseContext(),
 				tasksListView));
 

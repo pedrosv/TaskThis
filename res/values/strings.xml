@@ -9,4 +9,5 @@
     <string name="doing">Doing</string>
     <string name="save">Save</string>
     <string name="add">Add</string>
+    <string name="delete">Delete</string>
 </resources>
